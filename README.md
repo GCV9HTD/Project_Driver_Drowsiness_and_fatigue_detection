@@ -1,8 +1,14 @@
 # Project_Driver_Drowsiness_and_fatigue_detection
 Project_Driver_Drowsiness_and_fatigue_detection
 
-# driver-fatigue-detection-system
-drowsiness detection
+## Methodology : How we detect DROWSINESS
+The code detect faces and get facial landmarks coordinates especially the 12 points which define the two eyes left and right (Fig 1). After getting the 12 points of left and right eye, we compute Eye aspect ratio (Fig 2) to estimate the level of the eye opening. Open eyes have high values (>0.2) of EAR while the closed eye it is getting close to zero.
+
+<p align="center"> <img src="facial-landmarks.jpg"/> </p>
+Fig 1: 300-W facial landmarks annotations.
+
+<p align="center"> <img src="eye-aspect-ratio.png"/> </p>
+Fig 2: Eye aspect ratio formula.
 
 # Intallation process
 
@@ -102,5 +108,6 @@ python drowsiness detection.py --webcam 1 --alarm "alarm.wav"
 ## Results On my Computer with DROWSINESS ALERT
 
 <p align="center"> <img src="project_driver_drowsiness_detection2.png"/> </p>
+
 
 Copyright Romaric Tsopnang, All rights reserved.
