@@ -37,6 +37,7 @@ def eye_aspect_ratio(eye):
 	# return the eye aspect ratio
 	return ear
 
+
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
 
@@ -73,7 +74,10 @@ predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
 print("[INFO] starting video stream thread...")
 vs = VideoStream(src=args["webcam"]).start()
 time.sleep(1.0)
-
+vec = np.empty([68, 2], dtype = int)
+status="Not Sleeping"
+HeadRotation = "left"
+Distraction = "Not Distrated"
 # loop over frames from the video stream
 while True:
 	# grab the frame from the threaded video file stream, resize
@@ -84,15 +88,21 @@ while True:
 	gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
 	# detect faces in the grayscale frame
-	rects = detector(gray, 0)
+	rects = detector(gray, 1)
 
 	# loop over the face detections
-	for rect in rects:
+	"""
+	for k, rect in rects:
+		print("Detection {}: Left: {} Top: {} Right: {} Bottom: {}".format(
+            k, rect.left(), rect.top(), rect.right(), rect.bottom()))
 		# determine the facial landmarks for the face region, then
 		# convert the facial landmark (x, y)-coordinates to a NumPy
 		# array
 		shape = predictor(gray, rect)
 		shape = face_utils.shape_to_np(shape)
+
+		print("Part 0: {}, Part 1: {} ...".format(shape.part(0),
+                                                  shape.part(1)))
 
 		# extract the left and right eye coordinates, then use the
 		# coordinates to compute the eye aspect ratio for both eyes
@@ -147,7 +157,94 @@ while True:
 		# thresholds and frame counters
 		cv2.putText(frame, "EAR: {:.2f}".format(ear), (300, 30),
 			cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+		cv2.putText(frame, "Detection {}: Left: {} Top: {} Right: {} Bottom: {}".format(
+            k, rect.left(), rect.top(), rect.right(), rect.bottom()), (330, 30),
+			cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+		cv2.putText(frame, "Part 0: {}, Part 1: {} ...".format(shape.part(0),
+            shape.part(1)), (360, 30),
+			cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+	"""
 
+	for k, d in enumerate(rects):
+		#print("Detection {}: Left: {} Top: {} Right: {} Bottom: {}".format(
+        #    k, d.left(), d.top(), d.right(), d.bottom()))
+        # Get the landmarks/parts for the face in box d.
+		shape = predictor(gray, d)
+		#print("Part 0: {}, Part 1: {} ...".format(shape.part(0),
+        #                                          shape.part(1)))
+        # Draw the face landmarks on the screen.
+		for b in range(68):
+			vec[b][0] = shape.part(b).x
+			vec[b][1] = shape.part(b).y
+
+
+		# extract the left and right eye coordinates, then use the
+		# coordinates to compute the eye aspect ratio for both eyes
+		'''
+		Examining the image, we can see that facial regions can be accessed via simple Python indexing (assuming zero-indexing with Python since the image above is one-indexed):
+
+		The mouth can be accessed through points [48, 68].
+		The right eyebrow through points [17, 22].
+		The left eyebrow through points [22, 27].
+		The right eye using [36, 42].
+		The left eye with [42, 48].
+		The nose using [27, 35].
+		And the jaw via [0, 17].
+		'''
+		jaw = vec[0:17]
+		mouth = vec[48:67]
+		leftEye = vec[36:42]
+		rightEye = vec[42:48]
+		leftEAR = eye_aspect_ratio(leftEye)
+		rightEAR = eye_aspect_ratio(rightEye)
+		mouthRatio = eye_aspect_ratio(mouth)
+
+		# compute the convex hull for the left and right eye, then
+		# visualize each of the eyes
+		jawHull = cv2.convexHull(jaw)
+		mouthHull = cv2.convexHull(mouth)
+		leftEyeHull = cv2.convexHull(leftEye)
+		rightEyeHull = cv2.convexHull(rightEye)
+		cv2.drawContours(frame, [jawHull], -1, (0, 255, 0), 1)
+		cv2.drawContours(frame, [mouthHull], -1, (0, 255, 0), 1)
+		cv2.drawContours(frame, [leftEyeHull], -1, (0, 255, 0), 1)
+		cv2.drawContours(frame, [rightEyeHull], -1, (0, 255, 0), 1)
+
+
+		#if the avarage eye aspect ratio of lef and right eye less than 0.2, the status is sleeping.
+		ear = (rightEAR+leftEAR)/2
+		if ear < 0.2:
+			status="sleeping"
+		else:
+			status="Not Sleeping"
+
+		if leftEAR < rightEAR:
+			HeadRotation="left"
+			if(rightEAR - leftEAR > 0.09):
+				Distraction = "Distrated"
+			else:
+				Distraction = "Not Distrated"
+		else:
+			HeadRotation="right"
+			if(leftEAR - rightEAR > 0.09):
+				Distraction = "Distrated"
+			else:
+				Distraction = "Not Distrated"
+
+		cv2.putText(frame, "EAR: {:.2f}".format(ear), (10, 30),
+			cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+		cv2.putText(frame, "MOUTH: {:.2f}".format(mouthRatio), (10, 60),
+			cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+		cv2.putText(frame, status, (10, 90),
+			cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 0), 2)
+		cv2.putText(frame, "Head Rotation: {}".format(HeadRotation), (10, 300),
+			cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+		cv2.putText(frame, Distraction, (10, 320),
+			cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 0), 2)
+
+		#print(status)
+
+	#win.add_overlay(shape)
 	# show the frame
 	cv2.imshow("Frame", frame)
 	key = cv2.waitKey(1) & 0xFF
