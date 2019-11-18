@@ -1,8 +1,11 @@
 
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 from scipy.spatial import distance as dist
 from imutils.video import VideoStream
 from imutils import face_utils
 from threading import Thread
+import smtplib, ssl
 import numpy as np
 import pyglet
 import argparse
@@ -46,6 +49,21 @@ ap.add_argument("-w", "--webcam", type=int, default=0,
 ap.add_argument("-a", "--alarm", type=str, default="alarm.wav",
 	help="Sound to play as alarm")
 args = vars(ap.parse_args())
+
+#Define Email parameters
+port = 465  # For SSL
+smtp_server = "smtp.gmail.com"
+sender_email = "smartcaralert237@gmail.com"  # Enter your address
+receiver_email = "tsopnangsr@gmail.com"  # Enter receiver address
+password = "SmartCarAlert237"
+message = """From: From Smart Car 237 <smartcaralert237@gmail.com>
+To: To Romaric Tsopnang <tsopnangsr@gmail.com>
+Subject: Drowsiness and Distraction Detected
+
+The driver in the car imatriculated LT125OU is Drowsy and Distrated.
+"""
+
+context = ssl.create_default_context()
 
 # define two constants, one for the eye aspect ratio to indicate
 # blink and then a second constant for the number of consecutive
@@ -228,6 +246,10 @@ while True:
 			HeadRotation="right"
 			if(leftEAR - rightEAR > 0.09):
 				Distraction = "Distrated"
+				with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
+				    server.login(sender_email, password)
+				    server.sendmail(sender_email, receiver_email, message)
+				print("Email sent...")
 			else:
 				Distraction = "Not Distrated"
 
